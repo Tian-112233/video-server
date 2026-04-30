@@ -1,0 +1,792 @@
+
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VideoNest · 我的视频空间</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --primary: #3B82F6;
+    --primary-light: #EFF6FF;
+    --primary-dark: #1D4ED8;
+    --accent: #10B981;
+    --bg: #F0F4FF;
+    --surface: #FFFFFF;
+    --border: #E2E8F5;
+    --text: #1A2540;
+    --muted: #64748B;
+    --danger: #EF4444;
+    --shadow: 0 4px 20px rgba(59,130,246,0.10);
+    --radius: 16px;
+    --radius-sm: 10px;
+    --api: 'https://video-server-elhb.onrender.com';
+  }
+
+  body {
+    font-family: 'Noto Sans SC', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* NAV */
+  nav {
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    height: 62px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 36px;
+    position: sticky;
+    top: 0;
+    z-index: 200;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--primary);
+    letter-spacing: -0.5px;
+    cursor: pointer;
+  }
+
+  .logo-icon {
+    width: 34px; height: 34px;
+    background: linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%);
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(59,130,246,0.35);
+  }
+
+  .logo-icon svg { width: 16px; height: 16px; fill: white; }
+
+  .nav-right { display: flex; align-items: center; gap: 12px; }
+
+  .btn {
+    padding: 9px 20px;
+    border-radius: 9px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    font-family: inherit;
+    transition: all 0.18s ease;
+    display: inline-flex; align-items: center; gap: 7px;
+  }
+
+  .btn-primary { background: var(--primary); color: #fff; box-shadow: 0 2px 8px rgba(59,130,246,0.3); }
+  .btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(59,130,246,0.4); }
+  .btn-ghost { background: transparent; color: var(--muted); border: 1.5px solid var(--border); }
+  .btn-ghost:hover { background: var(--surface); color: var(--text); }
+  .btn-danger { background: #FEF2F2; color: var(--danger); border: none; }
+  .btn-danger:hover { background: #FEE2E2; }
+
+  /* MAIN */
+  main { max-width: 1100px; margin: 0 auto; padding: 40px 24px; }
+
+  /* PAGES */
+  .page { display: none; animation: fadeIn 0.25s ease; }
+  .page.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ===== HOME ===== */
+  .hero {
+    background: linear-gradient(135deg, #EFF6FF 0%, #F0FDF9 100%);
+    border: 1px solid #BFDBFE;
+    border-radius: 22px;
+    padding: 52px 48px;
+    text-align: center;
+    margin-bottom: 36px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(59,130,246,0.10) 0%, transparent 70%);
+    top: -80px; right: -80px;
+    border-radius: 50%;
+    pointer-events: none;
+  }
+
+  .hero h1 { font-size: 34px; font-weight: 700; letter-spacing: -0.8px; margin-bottom: 10px; }
+  .hero p { font-size: 15px; color: var(--muted); max-width: 420px; margin: 0 auto 24px; line-height: 1.7; }
+
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 36px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 20px;
+    text-align: center;
+    box-shadow: var(--shadow);
+  }
+
+  .stat-num { font-size: 28px; font-weight: 700; color: var(--primary); letter-spacing: -1px; }
+  .stat-label { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
+  .section-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .section-title { font-size: 17px; font-weight: 600; }
+
+  /* VIDEO GRID */
+  .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; }
+
+  .video-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.22s ease;
+    box-shadow: var(--shadow);
+  }
+
+  .video-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(59,130,246,0.16); border-color: #93C5FD; }
+
+  .thumb {
+    aspect-ratio: 16/9;
+    background: linear-gradient(135deg, #DBEAFE, #E0F2FE);
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+
+  .thumb-colors { background: var(--thumb-bg, linear-gradient(135deg, #DBEAFE, #E0F2FE)); }
+
+  .play-circle {
+    width: 46px; height: 46px;
+    background: rgba(255,255,255,0.95);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    transition: transform 0.18s;
+  }
+
+  .video-card:hover .play-circle { transform: scale(1.12); }
+  .play-circle svg { width: 18px; height: 18px; fill: var(--primary); margin-left: 3px; }
+
+  .video-info { padding: 14px 16px; }
+  .video-title { font-size: 14px; font-weight: 500; line-height: 1.4; margin-bottom: 7px; color: var(--text); }
+  .video-meta { font-size: 12px; color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .tag { background: var(--primary-light); color: var(--primary); font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 5px; }
+
+  .empty-state {
+    text-align: center;
+    padding: 64px 24px;
+    color: var(--muted);
+  }
+  .empty-state svg { width: 56px; height: 56px; stroke: #CBD5E1; fill: none; stroke-width: 1.3; margin-bottom: 16px; }
+  .empty-state h3 { font-size: 16px; font-weight: 500; margin-bottom: 6px; color: var(--text); }
+  .empty-state p { font-size: 14px; line-height: 1.6; }
+
+  /* ===== UPLOAD PAGE ===== */
+  .upload-wrap { max-width: 580px; margin: 0 auto; }
+  .page-title { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 6px; }
+  .page-sub { font-size: 14px; color: var(--muted); margin-bottom: 32px; }
+
+  .drop-zone {
+    border: 2.5px dashed #93C5FD;
+    border-radius: var(--radius);
+    padding: 52px 32px;
+    text-align: center;
+    background: var(--surface);
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 24px;
+  }
+
+  .drop-zone:hover, .drop-zone.over { border-color: var(--primary); background: var(--primary-light); }
+
+  .drop-icon {
+    width: 58px; height: 58px;
+    background: var(--primary-light);
+    border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 16px;
+  }
+
+  .drop-icon svg { width: 28px; height: 28px; stroke: var(--primary); fill: none; stroke-width: 1.8; }
+  .drop-zone h3 { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+  .drop-zone p { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+  .badges { display: flex; gap: 6px; justify-content: center; margin-top: 12px; }
+  .badge { background: #EFF6FF; color: #2563EB; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 6px; letter-spacing: 0.3px; }
+
+  #fileInput { display: none; }
+
+  .file-preview {
+    background: #F0FDF4;
+    border: 1.5px solid #86EFAC;
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .file-preview svg { width: 20px; height: 20px; stroke: #16A34A; fill: none; flex-shrink: 0; }
+  .file-preview-info { flex: 1; min-width: 0; }
+  .file-preview-name { font-size: 13px; font-weight: 500; color: #166534; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .file-preview-size { font-size: 12px; color: #4ADE80; margin-top: 2px; }
+
+  .form-group { margin-bottom: 18px; }
+  .form-label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 7px; color: var(--text); }
+  .form-input {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+    background: var(--surface);
+  }
+  .form-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,0.12); }
+
+  /* Progress */
+  .progress-wrap { margin: 20px 0; }
+  .progress-bar { background: #E2E8F5; border-radius: 999px; height: 8px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--primary), #60A5FA); border-radius: 999px; width: 0%; transition: width 0.4s ease; }
+  .progress-label { font-size: 13px; color: var(--muted); text-align: center; margin-top: 8px; }
+
+  .upload-actions { display: flex; gap: 10px; margin-top: 24px; }
+  .upload-actions .btn { flex: 1; justify-content: center; padding: 13px; font-size: 15px; }
+
+  /* ===== PLAYER PAGE ===== */
+  .back-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 14px; color: var(--muted);
+    cursor: pointer; padding: 7px 14px;
+    border-radius: 8px; transition: all 0.15s;
+    margin-bottom: 24px;
+    border: none; background: none; font-family: inherit;
+  }
+  .back-btn:hover { background: var(--surface); color: var(--text); }
+  .back-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2.2; }
+
+  .player-box {
+    background: #0B1120;
+    border-radius: 18px;
+    overflow: hidden;
+    margin-bottom: 24px;
+    aspect-ratio: 16/9;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+
+  .player-box video { width: 100%; height: 100%; object-fit: contain; display: none; }
+  .player-box video.visible { display: block; }
+
+  .player-loading {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 16px; color: rgba(255,255,255,0.4);
+  }
+
+  .spinner {
+    width: 40px; height: 40px;
+    border: 3px solid rgba(255,255,255,0.1);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .player-info-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px 26px;
+    box-shadow: var(--shadow);
+  }
+
+  .player-title { font-size: 21px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.4px; }
+  .player-meta { font-size: 13px; color: var(--muted); display: flex; gap: 14px; flex-wrap: wrap; }
+
+  .share-row {
+    display: flex; align-items: center; gap: 10px;
+    margin-top: 18px; padding-top: 18px;
+    border-top: 1px solid var(--border);
+  }
+
+  .share-label { font-size: 13px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+  .share-url-input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 14px;
+    font-size: 12px;
+    color: var(--muted);
+    font-family: monospace;
+    outline: none;
+  }
+
+  .btn-copy {
+    padding: 9px 16px;
+    background: var(--primary-light);
+    color: var(--primary);
+    border: none; border-radius: 8px;
+    font-size: 13px; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+    transition: all 0.15s; white-space: nowrap;
+  }
+  .btn-copy:hover { background: #DBEAFE; }
+  .btn-copy.copied { background: #DCFCE7; color: #166534; }
+
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: #1E293B; color: #fff;
+    padding: 12px 24px; border-radius: 10px;
+    font-size: 14px; font-weight: 500;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    transition: transform 0.3s ease;
+    z-index: 999;
+    pointer-events: none;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* Loading overlay */
+  .loading-overlay {
+    position: fixed; inset: 0;
+    background: rgba(240,244,255,0.8);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 500;
+    backdrop-filter: blur(4px);
+  }
+
+  .loading-box {
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 32px 48px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(59,130,246,0.15);
+  }
+
+  .loading-box .spinner { margin: 0 auto 16px; width: 48px; height: 48px; }
+  .loading-box p { font-size: 14px; color: var(--muted); }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    nav { padding: 0 16px; }
+    main { padding: 24px 14px; }
+    .hero { padding: 36px 20px; }
+    .hero h1 { font-size: 24px; }
+    .stats-row { grid-template-columns: repeat(3,1fr); gap: 10px; }
+    .stat-num { font-size: 22px; }
+  }
+
+  /* Thumb color variants */
+  .tc-0 { background: linear-gradient(135deg,#DBEAFE,#EDE9FE); }
+  .tc-1 { background: linear-gradient(135deg,#D1FAE5,#ECFDF5); }
+  .tc-2 { background: linear-gradient(135deg,#FEF3C7,#FFF7ED); }
+  .tc-3 { background: linear-gradient(135deg,#FCE7F3,#FDF2F8); }
+  .tc-4 { background: linear-gradient(135deg,#CFFAFE,#EFF6FF); }
+  .tc-5 { background: linear-gradient(135deg,#E0E7FF,#EDE9FE); }
+</style>
+</head>
+<body>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Nav -->
+<nav>
+  <div class="logo" onclick="goHome()">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+    </div>
+    VideoNest
+  </div>
+  <div class="nav-right">
+    <button class="btn btn-ghost" onclick="showPage('home')">首页</button>
+    <button class="btn btn-primary" onclick="showPage('upload')">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      上传视频
+    </button>
+  </div>
+</nav>
+
+<main>
+
+  <!-- HOME -->
+  <div id="home" class="page active">
+    <div class="hero">
+      <h1>我的视频空间 🎬</h1>
+      <p>上传、管理、分享你的视频内容，随时随地在线观看</p>
+      <button class="btn btn-primary" onclick="showPage('upload')" style="font-size:15px;padding:13px 32px;">
+        上传视频
+      </button>
+    </div>
+
+    <div class="stats-row" id="statsRow">
+      <div class="stat-card"><div class="stat-num" id="statCount">0</div><div class="stat-label">已上传视频</div></div>
+      <div class="stat-card"><div class="stat-num" id="statSize">0 MB</div><div class="stat-label">已用存储</div></div>
+      <div class="stat-card"><div class="stat-num" id="statViews">0</div><div class="stat-label">总播放次数</div></div>
+    </div>
+
+    <div class="section-hd">
+      <div class="section-title">所有视频</div>
+      <button class="btn btn-ghost" style="font-size:13px;padding:7px 14px;" onclick="loadVideos()">刷新</button>
+    </div>
+
+    <div class="video-grid" id="videoGrid">
+      <div class="empty-state" style="grid-column:1/-1">
+        <div class="spinner" style="margin:0 auto 16px;border-color:#E2E8F5;border-top-color:#93C5FD;"></div>
+        <p>正在加载视频...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- UPLOAD -->
+  <div id="upload" class="page">
+    <div class="upload-wrap">
+      <h2 class="page-title">上传视频</h2>
+      <p class="page-sub">支持 MP4、MOV、AVI、MKV 格式，单文件最大 2GB</p>
+
+      <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <div class="drop-icon">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </div>
+        <h3>拖拽视频到这里，或点击选择</h3>
+        <p>从你的电脑选择视频文件</p>
+        <div class="badges">
+          <span class="badge">MP4</span><span class="badge">MOV</span><span class="badge">AVI</span><span class="badge">MKV</span>
+        </div>
+        <input type="file" id="fileInput" accept="video/*">
+      </div>
+
+      <div id="uploadForm" style="display:none;">
+        <div class="file-preview" id="filePreview">
+          <svg viewBox="0 0 24 24" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <div class="file-preview-info">
+            <div class="file-preview-name" id="previewName">文件名.mp4</div>
+            <div class="file-preview-size" id="previewSize">0 MB</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">视频标题 *</label>
+          <input type="text" class="form-input" id="videoTitle" placeholder="给视频起个名字...">
+        </div>
+
+        <div class="progress-wrap" id="progressWrap" style="display:none;">
+          <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+          <div class="progress-label" id="progressLabel">准备上传...</div>
+        </div>
+
+        <div class="upload-actions">
+          <button class="btn btn-ghost" onclick="resetUpload()">取消</button>
+          <button class="btn btn-primary" id="uploadBtn" onclick="doUpload()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            开始上传
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLAYER -->
+  <div id="player" class="page">
+    <button class="back-btn" onclick="goHome()">
+      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+      返回视频列表
+    </button>
+
+    <div class="player-box" id="playerBox">
+      <div class="player-loading" id="playerLoading">
+        <div class="spinner"></div>
+        <p>视频加载中...</p>
+      </div>
+      <video id="videoEl" controls></video>
+    </div>
+
+    <div class="player-info-card">
+      <div class="player-title" id="playerTitle">视频标题</div>
+      <div class="player-meta">
+        <span id="playerDate">上传时间</span>
+        <span id="playerSize">文件大小</span>
+        <span id="playerViews">播放次数</span>
+      </div>
+      <div class="share-row">
+        <span class="share-label">分享链接</span>
+        <input class="share-url-input" id="shareUrlInput" readonly>
+        <button class="btn-copy" id="copyBtn" onclick="copyShareUrl()">复制</button>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  const API = 'https://video-server-elhb.onrender.com';
+
+  let currentVideoId = null;
+
+  // ===== PAGES =====
+  function showPage(name) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(name).classList.add('active');
+    if (name === 'home') loadVideos();
+  }
+
+  function goHome() { showPage('home'); }
+
+  // ===== TOAST =====
+  function toast(msg, duration = 2500) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), duration);
+  }
+
+  // ===== FORMAT HELPERS =====
+  function fmtSize(bytes) {
+    if (!bytes) return '未知';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+    if (bytes < 1024 * 1024 * 1024) return (bytes / 1024 / 1024).toFixed(0) + ' MB';
+    return (bytes / 1024 / 1024 / 1024).toFixed(2) + ' GB';
+  }
+
+  function fmtDate(iso) {
+    try { return new Date(iso).toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }); }
+    catch { return iso; }
+  }
+
+  // ===== LOAD VIDEOS =====
+  async function loadVideos() {
+    const grid = document.getElementById('videoGrid');
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+      <div class="spinner" style="margin:0 auto 16px;border-color:#E2E8F5;border-top-color:#93C5FD;"></div>
+      <p>正在加载视频...</p>
+    </div>`;
+
+    try {
+      const res = await fetch(API + '/api/videos');
+      const videos = await res.json();
+
+      updateStats(videos);
+
+      if (!videos || videos.length === 0) {
+        grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+          <svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="2"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+          <h3>还没有视频</h3>
+          <p>点击上方"上传视频"按钮，开始上传你的第一个视频吧！</p>
+        </div>`;
+        return;
+      }
+
+      const colors = ['tc-0','tc-1','tc-2','tc-3','tc-4','tc-5'];
+      grid.innerHTML = videos.map((v, i) => `
+        <div class="video-card" onclick="playVideo('${v.id}')">
+          <div class="thumb ${colors[i % colors.length]}">
+            <div class="play-circle">
+              <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+          </div>
+          <div class="video-info">
+            <div class="video-title">${escHtml(v.title)}</div>
+            <div class="video-meta">
+              <span>${fmtDate(v.date)}</span>
+              <span class="tag">${fmtSize(v.size)}</span>
+              <span>${v.views || 0} 次播放</span>
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+    } catch (err) {
+      grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <h3>加载失败</h3>
+        <p>无法连接到服务器，请稍后再试<br><small style="color:#94A3B8">${err.message}</small></p>
+      </div>`;
+    }
+  }
+
+  function updateStats(videos) {
+    document.getElementById('statCount').textContent = videos.length;
+    const totalBytes = videos.reduce((s, v) => s + (v.size || 0), 0);
+    document.getElementById('statSize').textContent = fmtSize(totalBytes);
+    const totalViews = videos.reduce((s, v) => s + (v.views || 0), 0);
+    document.getElementById('statViews').textContent = totalViews;
+  }
+
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ===== PLAY VIDEO =====
+  async function playVideo(id) {
+    showPage('player');
+    currentVideoId = id;
+
+    const videoEl = document.getElementById('videoEl');
+    const loading = document.getElementById('playerLoading');
+    videoEl.classList.remove('visible');
+    loading.style.display = 'flex';
+
+    try {
+      // Get video URL
+      const res = await fetch(`${API}/api/video/${id}/url`);
+      const data = await res.json();
+
+      if (!data.url) throw new Error('未获取到播放链接');
+
+      // Get video info
+      const listRes = await fetch(API + '/api/videos');
+      const videos = await listRes.json();
+      const v = videos.find(x => x.id == id) || {};
+
+      document.getElementById('playerTitle').textContent = v.title || '未命名视频';
+      document.getElementById('playerDate').textContent = fmtDate(v.date) + ' 上传';
+      document.getElementById('playerSize').textContent = fmtSize(v.size);
+      document.getElementById('playerViews').textContent = (v.views || 0) + ' 次播放';
+      document.getElementById('shareUrlInput').value = window.location.href.split('?')[0] + '?v=' + id;
+
+      videoEl.src = data.url;
+      videoEl.oncanplay = () => {
+        loading.style.display = 'none';
+        videoEl.classList.add('visible');
+      };
+      videoEl.onerror = () => {
+        loading.innerHTML = '<p style="color:rgba(255,255,255,0.5)">视频加载失败，请重试</p>';
+      };
+
+    } catch (err) {
+      loading.innerHTML = `<p style="color:rgba(255,255,255,0.5)">加载失败：${err.message}</p>`;
+    }
+  }
+
+  // ===== COPY SHARE URL =====
+  function copyShareUrl() {
+    const input = document.getElementById('shareUrlInput');
+    navigator.clipboard.writeText(input.value).then(() => {
+      const btn = document.getElementById('copyBtn');
+      btn.textContent = '已复制！';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = '复制'; btn.classList.remove('copied'); }, 2000);
+    });
+  }
+
+  // ===== UPLOAD =====
+  let selectedFile = null;
+
+  document.getElementById('fileInput').addEventListener('change', function() {
+    if (this.files[0]) selectFile(this.files[0]);
+  });
+
+  const dz = document.getElementById('dropZone');
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('over');
+    const f = e.dataTransfer.files[0];
+    if (f && f.type.startsWith('video/')) selectFile(f);
+    else toast('请选择视频文件！');
+  });
+
+  function selectFile(file) {
+    selectedFile = file;
+    document.getElementById('previewName').textContent = file.name;
+    document.getElementById('previewSize').textContent = fmtSize(file.size);
+    document.getElementById('videoTitle').value = file.name.replace(/\.[^.]+$/, '');
+    document.getElementById('dropZone').style.display = 'none';
+    document.getElementById('uploadForm').style.display = 'block';
+  }
+
+  function resetUpload() {
+    selectedFile = null;
+    document.getElementById('fileInput').value = '';
+    document.getElementById('videoTitle').value = '';
+    document.getElementById('dropZone').style.display = 'block';
+    document.getElementById('uploadForm').style.display = 'none';
+    document.getElementById('progressWrap').style.display = 'none';
+    document.getElementById('progressFill').style.width = '0%';
+    document.getElementById('uploadBtn').disabled = false;
+    document.getElementById('uploadBtn').innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      开始上传`;
+  }
+
+  async function doUpload() {
+    if (!selectedFile) { toast('请先选择文件'); return; }
+    const title = document.getElementById('videoTitle').value.trim();
+    if (!title) { toast('请输入视频标题'); document.getElementById('videoTitle').focus(); return; }
+
+    const btn = document.getElementById('uploadBtn');
+    btn.disabled = true;
+    btn.innerHTML = '上传中...';
+
+    const progressWrap = document.getElementById('progressWrap');
+    const progressFill = document.getElementById('progressFill');
+    const progressLabel = document.getElementById('progressLabel');
+    progressWrap.style.display = 'block';
+
+    const formData = new FormData();
+    formData.append('video', selectedFile);
+    formData.append('title', title);
+
+    try {
+      // Simulate progress while uploading (XHR for real progress)
+      const xhr = new XMLHttpRequest();
+
+      xhr.upload.addEventListener('progress', e => {
+        if (e.lengthComputable) {
+          const pct = Math.round(e.loaded / e.total * 100);
+          progressFill.style.width = pct + '%';
+          progressLabel.textContent = `上传中... ${pct}%（${fmtSize(e.loaded)} / ${fmtSize(e.total)}）`;
+        }
+      });
+
+      xhr.addEventListener('load', () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          progressFill.style.width = '100%';
+          progressLabel.textContent = '✅ 上传成功！';
+          toast('视频上传成功！');
+          setTimeout(() => { resetUpload(); goHome(); }, 1500);
+        } else {
+          throw new Error(`服务器错误: ${xhr.status}`);
+        }
+      });
+
+      xhr.addEventListener('error', () => { throw new Error('网络错误，上传失败'); });
+
+      xhr.open('POST', API + '/api/upload');
+      xhr.send(formData);
+
+    } catch (err) {
+      toast('上传失败：' + err.message);
+      progressLabel.textContent = '❌ 上传失败，请重试';
+      btn.disabled = false;
+      btn.innerHTML = '重新上传';
+    }
+  }
+
+  // ===== INIT =====
+  loadVideos();
+</script>
+</body>
+</html>
