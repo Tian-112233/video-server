@@ -771,8 +771,20 @@ async function doUpload() {
       }
     });
 
-    xhr.addEventListener('load', () => { // 直传R2时状态码200或0都算成功 if (xhr.status >= 200 && xhr.status < 300 || xhr.status === 0) { progressFill.style.width = '100%'; progressLabel.textContent = '✅ 上传成功！'; toast('视频上传成功！'); setTimeout(() => { resetUpload(); goHome(); }, 1500); } else { progressLabel.textContent = '❌ 上传失败，请重试'; btn.disabled = false; btn.innerHTML = '重新上传'; toast('上传失败: ' + xhr.status); } });
-
+xhr.addEventListener('load', () => {
+  // 直传R2时状态码200或0都算成功
+  if (xhr.status >= 200 && xhr.status < 300 || xhr.status === 0) {
+    progressFill.style.width = '100%';
+    progressLabel.textContent = '✅ 上传成功！';
+    toast('视频上传成功！');
+    setTimeout(() => { resetUpload(); goHome(); }, 1500);
+  } else {
+    progressLabel.textContent = '❌ 上传失败，请重试';
+    btn.disabled = false;
+    btn.innerHTML = '重新上传';
+    toast('上传失败: ' + xhr.status);
+  }
+});
     xhr.addEventListener('error', () => {
       progressLabel.textContent = '❌ 上传失败，请重试';
       btn.disabled = false;
