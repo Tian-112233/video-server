@@ -1,8 +1,7 @@
 import express from 'express';
-import multer from 'multer';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 dotenv.config();
@@ -28,35 +27,35 @@ const BUCKET = process.env.R2_BUCKET_NAME;
 // 内存存储视频元数据
 const videos = [];
 
-// 上传接口
-const upload = multer({ 
-  storage: multer.memoryStorage(), 
-  limits: { fileSize: 2 * 1024 * 1024 * 1024 } 
-});
-
-app.post('/api/upload', upload.single('video'), async (req, res) => {
+// 第一步：获取直传链接
+app.post('/api/upload-url', async (req, res) => {
   try {
-    const file = req.file;
-    const title = req.body.title || file.originalname;
-    const key = `videos/${Date.now()}-${file.originalname}`;
+    const { filename, contentType, title, size } = req.body;
+    const key = `videos/${Date.now()}-${filename}`;
+    const id = Date.now().toString();
 
-    await s3.send(new PutObjectCommand({
-      Bucket: BUCKET,
-      Key: key,
-      Body: file.buffer,
-      ContentType: file.mimetype,
-    }));
+    const uploadUrl = await getSignedUrl(
+      s3,
+      new PutObjectCommand({
+        Bucket: BUCKET,
+        Key: key,
+        ContentType: contentType,
+      }),
+      { expiresIn: 3600 }
+    );
 
-    const video = { 
-      id: Date.now().toString(), 
-      title, 
-      key, 
-      size: file.size, 
-      date: new Date().toISOString(), 
-      views: 0 
+    // 先保存元数据
+    const video = {
+      id,
+      title: title || filename,
+      key,
+      size: size || 0,
+      date: new Date().toISOString(),
+      views: 0,
     };
     videos.push(video);
-    res.json({ success: true, video });
+
+    res.json({ uploadUrl, id });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -74,8 +73,8 @@ app.get('/api/video/:id/url', async (req, res) => {
     if (!video) return res.status(404).json({ error: '找不到视频' });
 
     const url = await getSignedUrl(
-      s3, 
-      new GetObjectCommand({ Bucket: BUCKET, Key: video.key }), 
+      s3,
+      new GetObjectCommand({ Bucket: BUCKET, Key: video.key }),
       { expiresIn: 3600 }
     );
     video.views++;
