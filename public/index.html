@@ -731,60 +731,75 @@
       开始上传`;
   }
 
-  async function doUpload() {
-    if (!selectedFile) { toast('请先选择文件'); return; }
-    const title = document.getElementById('videoTitle').value.trim();
-    if (!title) { toast('请输入视频标题'); document.getElementById('videoTitle').focus(); return; }
+async function doUpload() {
+  if (!selectedFile) { toast('请先选择文件'); return; }
+  const title = document.getElementById('videoTitle').value.trim();
+  if (!title) { toast('请输入视频标题'); document.getElementById('videoTitle').focus(); return; }
 
-    const btn = document.getElementById('uploadBtn');
-    btn.disabled = true;
-    btn.innerHTML = '上传中...';
+  const btn = document.getElementById('uploadBtn');
+  btn.disabled = true;
+  btn.innerHTML = '上传中...';
 
-    const progressWrap = document.getElementById('progressWrap');
-    const progressFill = document.getElementById('progressFill');
-    const progressLabel = document.getElementById('progressLabel');
-    progressWrap.style.display = 'block';
+  const progressWrap = document.getElementById('progressWrap');
+  const progressFill = document.getElementById('progressFill');
+  const progressLabel = document.getElementById('progressLabel');
+  progressWrap.style.display = 'block';
+  progressLabel.textContent = '正在获取上传链接...';
 
-    const formData = new FormData();
-    formData.append('video', selectedFile);
-    formData.append('title', title);
+  try {
+    // 第一步：从后端获取直传链接
+    const res = await fetch(API + '/api/upload-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        filename: selectedFile.name,
+        contentType: selectedFile.type,
+        title: title,
+        size: selectedFile.size,
+      })
+    });
+    const { uploadUrl } = await res.json();
 
-    try {
-      // Simulate progress while uploading (XHR for real progress)
-      const xhr = new XMLHttpRequest();
+    // 第二步：直接上传到 R2（绕过 Render）
+    const xhr = new XMLHttpRequest();
 
-      xhr.upload.addEventListener('progress', e => {
-        if (e.lengthComputable) {
-          const pct = Math.round(e.loaded / e.total * 100);
-          progressFill.style.width = pct + '%';
-          progressLabel.textContent = `上传中... ${pct}%（${fmtSize(e.loaded)} / ${fmtSize(e.total)}）`;
-        }
-      });
+    xhr.upload.addEventListener('progress', e => {
+      if (e.lengthComputable) {
+        const pct = Math.round(e.loaded / e.total * 100);
+        progressFill.style.width = pct + '%';
+        progressLabel.textContent = `上传中... ${pct}%（${fmtSize(e.loaded)} / ${fmtSize(e.total)}）`;
+      }
+    });
 
-      xhr.addEventListener('load', () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          progressFill.style.width = '100%';
-          progressLabel.textContent = '✅ 上传成功！';
-          toast('视频上传成功！');
-          setTimeout(() => { resetUpload(); goHome(); }, 1500);
-        } else {
-          throw new Error(`服务器错误: ${xhr.status}`);
-        }
-      });
+    xhr.addEventListener('load', () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        progressFill.style.width = '100%';
+        progressLabel.textContent = '✅ 上传成功！';
+        toast('视频上传成功！');
+        setTimeout(() => { resetUpload(); goHome(); }, 1500);
+      } else {
+        throw new Error('上传失败: ' + xhr.status);
+      }
+    });
 
-      xhr.addEventListener('error', () => { throw new Error('网络错误，上传失败'); });
-
-      xhr.open('POST', API + '/api/upload');
-      xhr.send(formData);
-
-    } catch (err) {
-      toast('上传失败：' + err.message);
+    xhr.addEventListener('error', () => {
       progressLabel.textContent = '❌ 上传失败，请重试';
       btn.disabled = false;
       btn.innerHTML = '重新上传';
-    }
-  }
+      toast('上传失败，请检查网络');
+    });
 
+    xhr.open('PUT', uploadUrl);
+    xhr.setRequestHeader('Content-Type', selectedFile.type);
+    xhr.send(selectedFile);
+
+  } catch (err) {
+    toast('上传失败：' + err.message);
+    progressLabel.textContent = '❌ 上传失败，请重试';
+    btn.disabled = false;
+    btn.innerHTML = '重新上传';
+  }
+}
   // ===== INIT =====
   loadVideos();
 </script>
